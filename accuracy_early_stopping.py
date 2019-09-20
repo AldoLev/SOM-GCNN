@@ -1,3 +1,4 @@
+#Main file per ottenere l'accuratezza
 import torch
 import pickle
 import util
@@ -20,7 +21,8 @@ print('size ', len(dataset), ' graphs')
 print( dataset.num_classes , ' classes' )
 print( dataset.num_features , ' features' )
 
-#val_split=17
+# conv_dim è il numero di canali della convoluzione,
+# conv_dim deve essere lo stesso del modello che viene caricato
 conv_dim = 64
 lattice_dim = [util.args.p1, util.args.p2]
 sigma_out =util.args.sigma_out
@@ -38,6 +40,7 @@ print('weight decay: ', wd )
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('device: ',device)
+#loading the dataset
 batch_train_SOM = DataLoader(dataset, batch_size=len(dataset), shuffle=False)
 all_data = []
 for batch in batch_train_SOM:
