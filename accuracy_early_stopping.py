@@ -167,7 +167,7 @@ for repetition in range(util.args.repetitions):
         print('test')
         break
 
-error = np.std(accuracy_test)
+error = np.std(accuracy_test)/2
 accuracy_training=np.mean(accuracy_training)
 accuracy_validation=np.mean(accuracy_validation)
 accuracy_test=np.mean(accuracy_test)
