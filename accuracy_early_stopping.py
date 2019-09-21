@@ -40,7 +40,7 @@ print('weight decay: ', wd )
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('device: ',device)
-#loading the dataset
+#loading dataset
 batch_train_SOM = DataLoader(dataset, batch_size=len(dataset), shuffle=False)
 all_data = []
 for batch in batch_train_SOM:
@@ -78,7 +78,7 @@ for repetition in range(util.args.repetitions):
         dataset_v = dataset[validation_T]
         dataset_t = dataset[test_T]
         '''
-
+        # indici per la cross validation
         train_indx = np.loadtxt('10fold_idx/train_idx-%d.txt' % (k+1) )
         test_indices = torch.from_numpy(np.loadtxt('10fold_idx/test_idx-%d.txt' % (k+1) )).type(torch.LongTensor)
         train_ind, val_ind, _, _ = train_test_split(train_indx, np.arange(len(train_indx)), test_size=0.1, random_state=42) 
@@ -89,7 +89,7 @@ for repetition in range(util.args.repetitions):
 
         if util.args.is_test == 1:
             print('test')
-            dataset_l = dataset[0:40]
+            dataset_l = dataset[0:100]
         else:
             dataset_l = dataset[train_indices]
         dataset_t = dataset[test_indices]
@@ -107,14 +107,14 @@ for repetition in range(util.args.repetitions):
 
         print('training the SOM ... ')
         model.train_SOM(all_data[0], 10000)
-        #with open('som0.p', 'wb') as outfile:
-            #pickle.dump(model.som, outfile)
 
+        # analisi quantization error e activation
         q_error , AC = model.SOM_goodness(all_data[0], activation = True)
         print('quantization error: ', q_error)
         print('lattice activation: ')
         print( AC)
 
+        # SVM pre-training
         weights, bias = model.SVM_pretraining(dataset_l)
         model.lin1.weight = torch.nn.Parameter(weights)
         model.lin1.bias = torch.nn.Parameter(bias)
@@ -132,13 +132,10 @@ for repetition in range(util.args.repetitions):
         acc_l.append( util.accuracy_eval(dataset_l, model, device))
         print('training0: ',acc_l[-1])
 
-        #for name, param in model.named_parameters():
-        #    if param.requires_grad:
-        #        print( name, param.data)
-
+        # optimizer
         optimizer = torch.optim.Adam(model.parameters(), lr=util.args.learning_rate, weight_decay=wd)
 
-        #criterion = torch.nn.MSELoss()
+        # Loss Function
         criterion = torch.nn.BCELoss()
         #criterion = torch.nn.L1Loss()
         #criterion  = torch.nn.NLLLoss()
@@ -146,44 +143,28 @@ for repetition in range(util.args.repetitions):
         for epoch in range(util.args.num_epochs):
             #loss_train =0
             #ln = 0
+            
+            # Training
             model.train()
-            if util.args.batch_size == 1:
-                for i in range(len(dataset_l)):
-                    optimizer.zero_grad()
-                    target = dataset_l[i].y.to(device).to(torch.float32)
-                    input = dataset_l[i].to(device)
-                    out = model(input)
-                    out = out[None,:]
-                    loss = criterion(out, target)
-                    loss.backward()
-                    optimizer.step()
-                    #model.som._weights = model.S_Tens
-            else:
-                for batch in batch_learning:
-                    optimizer.zero_grad()
-                    target = batch.y.to(device).to(torch.float32)
-                    target=target.view((target.size()[0],1))
-                    input = batch.to(device)
-                    out = model(input,train_batch=t_b)
-                    loss = criterion(out, target)
-                    l2_crit = torch.nn.MSELoss()
-                    reg_loss = 0
-                    PARAM = list(model.parameters())
-                    reg_loss += l2_crit(PARAM[-2], torch.from_numpy(np.zeros(PARAM[-2].size())).to(torch.float32).to(device))
-                    reg_loss += l2_crit(PARAM[-1], torch.from_numpy(np.zeros(PARAM[-1].size())).to(torch.float32).to(device))
-                    factor = reg
-                    loss += factor * reg_loss
-                    #loss_train = loss_train + loss.detach().numpy()
-                    #ln = ln +1
-                    loss.backward()
-                    optimizer.step()
-                    model.som._weights = model.S_Tens.cpu().detach().numpy()
-
-            #Loss_f.append( loss_train/ln)
-            #print('loss: ',Loss_f[-1])
-
-            #print(model.fc1.weight.grad)
-            #print(model.fc1.bias.grad)
+            for batch in batch_learning:
+                optimizer.zero_grad()
+                target = batch.y.to(device).to(torch.float32)
+                target=target.view((target.size()[0],1))
+                input = batch.to(device)
+                out = model(input,train_batch=t_b)
+                loss = criterion(out, target)
+                l2_crit = torch.nn.MSELoss()
+                reg_loss = 0
+                PARAM = list(model.parameters())
+                reg_loss += l2_crit(PARAM[-2], torch.from_numpy(np.zeros(PARAM[-2].size())).to(torch.float32).to(device))
+                reg_loss += l2_crit(PARAM[-1], torch.from_numpy(np.zeros(PARAM[-1].size())).to(torch.float32).to(device))
+                factor = reg
+                loss += factor * reg_loss
+                #loss_train = loss_train + loss.detach().numpy()
+                #ln = ln +1
+                loss.backward()
+                optimizer.step()
+                model.som._weights = model.S_Tens.cpu().detach().numpy()
 
             model.eval()
             acc = util.accuracy_eval(dataset_v, model, device)
