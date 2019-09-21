@@ -1,3 +1,4 @@
+# SOM-GCNN
 import torch
 import numpy as np
 from util import args
@@ -76,7 +77,9 @@ class ConvSOM_dense1(torch.nn.Module):
             x1 = F.leaky_relu(self.conv1(x, edge_index))
             x2 = F.leaky_relu(self.conv2(x1, edge_index))
             x3 = F.leaky_relu(self.conv3(x2, edge_index))
+            # concatenazione
             x= torch.cat([x1,x2,x3], dim=1)
+            # SOM con passaggio di gradiente
             x = self.SOM_gradient(x, batch=batch)
             x = x.view((batch[-1]+1,self.p[0]*self.p[1]))
             #x = F.relu(self.fc1(x))
@@ -84,6 +87,7 @@ class ConvSOM_dense1(torch.nn.Module):
             #x = F.relu(self.fc3(x))
             #x = self.fc4(x)
             #x=F.log_softmax(x, dim=-1)
+            # ultimo layer denso
             x =f(self.lin1(x))
             return x
         else:
@@ -93,12 +97,16 @@ class ConvSOM_dense1(torch.nn.Module):
             x1 = F.leaky_relu(self.conv1(x, edge_index))
             x2 = F.leaky_relu(self.conv2(x1, edge_index))
             x3 = F.leaky_relu(self.conv3(x2, edge_index))
+            # concatenazione
             x= torch.cat([x1,x2,x3], dim=1)
+            # SOM con passaggio di gradiente
             x = self.SOM_gradient(x)
             x = x.view(self.p[0]*self.p[1])
+            # ultimo layer denso
             x =f(self.lin1(x))
             return x
 
+    # Funzione per il pre-training con SVM
     def SVM_pretraining(self, dataset):
         X = []
         Y = []
@@ -133,12 +141,12 @@ class ConvSOM_dense1(torch.nn.Module):
         print('SVM tr accuracy: ',accuracy_tr)
         return Coefficients[np.argmax(accuracy_vl)], Bias[np.argmax(accuracy_vl)]
 
-
+    # salva il modello
     def save_test(self, modelname1, modelname2):
         torch.save(self.convolution.state_dict(), modelname1)
         torch.save(self.linear.state_dict(), modelname2)
 
-
+    # Funzione per il training della SOM
     def train_SOM(self, data, num_iterations, first=True, verbose=False):
         #self.convolution.eval()
         #x = self.convolution(data)
@@ -160,6 +168,7 @@ class ConvSOM_dense1(torch.nn.Module):
         #self.S_Tens = SOMweights
         self.S_Tens = torch.nn.Parameter( SOMweights)
 
+    # Funzione per ottenere l'errore di quantizzazione e il livello di attivazione dei neuroni della SOM
     def SOM_goodness(self, data, activation = False ):
         #self.convolution.eval()
         #x = self.convolution(data)
@@ -177,7 +186,7 @@ class ConvSOM_dense1(torch.nn.Module):
             return Q_error, AR
         return Q_error
 
-
+    # Funzione output della SOM senza passaggio di gradiente
     def img_out(self, graph):
         #self.convolution.eval()
         #x = self.convolution(graph)
