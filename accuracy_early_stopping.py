@@ -51,27 +51,11 @@ for batch in batch_train_SOM:
 accuracy_training = []
 accuracy_test = []
 accuracy_validation = []
-#history_loss = []
 for repetition in range(util.args.repetitions):
     print(time.time()-start)
 
     for k in range(util.args.fold):
 
-        '''
-        #   TEST SET: cross_val[k]
-        #   VALIDATION SET: cross_val[k+1]
-        #   TRAINING SET: the others
-        test_T = torch.from_numpy(cross_val[k])
-        validation_T = torch.from_numpy(cross_val[k-1])
-        train_T = torch.from_numpy(util.make_trainset(cross_val, k))
-        test = cross_val[k]
-        validation = cross_val[k-1]
-        train = util.make_trainset(cross_val, k)
-
-        dataset_l = dataset[train_T]
-        dataset_v = dataset[validation_T]
-        dataset_t = dataset[test_T]
-        '''
         # indici per la cross validation
         train_indx = np.loadtxt('10fold_idx/train_idx-%d.txt' % (k+1) )
         test_indices = torch.from_numpy(np.loadtxt('10fold_idx/test_idx-%d.txt' % (k+1) )).type(torch.LongTensor)
@@ -118,8 +102,7 @@ for repetition in range(util.args.repetitions):
         acc_l = []
         acc_t = []
         acc_v = []
-        #Loss_f = []
-
+        
         model.eval()
         acc = util.accuracy_eval(dataset_v, model, device)
         acc_v.append(acc)
@@ -135,10 +118,8 @@ for repetition in range(util.args.repetitions):
         criterion = torch.nn.BCELoss()
         #criterion = torch.nn.L1Loss()
         #criterion  = torch.nn.NLLLoss()
-        #print('test ','training ', 'loss ' )
+        #print('test ','training ' )
         for epoch in range(util.args.num_epochs):
-            #loss_train =0
-            #ln = 0
             
             # TRAINING
             model.train()
@@ -157,8 +138,6 @@ for repetition in range(util.args.repetitions):
                 reg_loss += l2_crit(PARAM[-1], torch.from_numpy(np.zeros(PARAM[-1].size())).to(torch.float32).to(device))
                 factor = reg
                 loss += factor * reg_loss
-                #loss_train = loss_train + loss.detach().numpy()
-                #ln = ln +1
                 # Backpropagation
                 loss.backward()
                 optimizer.step()
@@ -169,13 +148,12 @@ for repetition in range(util.args.repetitions):
             acc_v.append(acc)
             acc_t.append( util.accuracy_eval(dataset_t, model, device))
             acc_l.append( util.accuracy_eval(dataset_l, model, device))
-            #print(acc_t[-1],acc_l[-1], Loss_f[-1])
+            #print(acc_t[-1],acc_l[-1])
 
         accuracy_validation.append(np.amax(acc_v))
         accuracy_training.append(acc_l[np.argmax(acc_v)])
         accuracy_test.append(acc_t[np.argmax(acc_v)])
         print(np.argmax(acc_v))
-        #history_loss.append(Loss_f)
         if util.args.is_test == 1:
             print('test')
             break
