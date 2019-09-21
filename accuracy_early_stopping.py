@@ -37,23 +37,17 @@ print('sigma_out: ', sigma_out)
 print('regularization: ', reg)
 print('weight decay: ', wd )
 
-
+# cpu o gpu
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('device: ',device)
-#loading dataset
+#loading di tutto il dataset come un solo grafo per inizializzare la SOM
 batch_train_SOM = DataLoader(dataset, batch_size=len(dataset), shuffle=False)
 all_data = []
 for batch in batch_train_SOM:
     all_data.append(batch.to(device))
     break
 
-if util.args.batch_size == 1:
-    print('online learning')
-    t_b = False
-else:
-    t_b = True
-    print('batch learning')
-
+# liste per salvare l'accuracy di test, validation e training 
 accuracy_training = []
 accuracy_test = []
 accuracy_validation = []
@@ -94,10 +88,11 @@ for repetition in range(util.args.repetitions):
             dataset_l = dataset[train_indices]
         dataset_t = dataset[test_indices]
         dataset_v = dataset[val_indices]
-
+        # loading del dataset
         batch_learning = DataLoader(dataset_l, batch_size=util.args.batch_size, shuffle=True)
-
+        # inizializza il modello
         model = ConvSOM_dense1(dataset.num_features, 2, conv_dim, lattice_dim, load=str(k), train_batch=t_b).to(device)
+        # inizializza la SOM
         model.MiniSom( 2, sigma_out, 0.001, 'bubble')
 
         #q_error , AC = model.SOM_goodness(all_data[0], activation = True)
@@ -105,10 +100,11 @@ for repetition in range(util.args.repetitions):
         #print('lattice activation: ')
         #print( AC.astype(int))
 
+        # Training della SOM
         print('training the SOM ... ')
         model.train_SOM(all_data[0], 10000)
 
-        # analisi quantization error e activation
+        # analisi errore di quantizzazione e livello di attivazione
         q_error , AC = model.SOM_goodness(all_data[0], activation = True)
         print('quantization error: ', q_error)
         print('lattice activation: ')
@@ -144,7 +140,7 @@ for repetition in range(util.args.repetitions):
             #loss_train =0
             #ln = 0
             
-            # Training
+            # TRAINING
             model.train()
             for batch in batch_learning:
                 optimizer.zero_grad()
@@ -153,6 +149,7 @@ for repetition in range(util.args.repetitions):
                 input = batch.to(device)
                 out = model(input,train_batch=t_b)
                 loss = criterion(out, target)
+                # regolarizzazione ultimo layer
                 l2_crit = torch.nn.MSELoss()
                 reg_loss = 0
                 PARAM = list(model.parameters())
@@ -162,6 +159,7 @@ for repetition in range(util.args.repetitions):
                 loss += factor * reg_loss
                 #loss_train = loss_train + loss.detach().numpy()
                 #ln = ln +1
+                # Backpropagation
                 loss.backward()
                 optimizer.step()
                 model.som._weights = model.S_Tens.cpu().detach().numpy()
