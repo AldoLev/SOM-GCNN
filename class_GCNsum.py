@@ -1,3 +1,4 @@
+# GCNNsum
 import torch
 import numpy as np
 from util import args
@@ -39,11 +40,15 @@ class ConvN(torch.nn.Module):
             x = data.x
             edge_index = data.edge_index
             batch = data.batch
+            # Layer convolutivi
             x1 = F.leaky_relu(self.conv1(x, edge_index))
             x2 = F.leaky_relu(self.conv2(x1, edge_index))
             x3 = F.leaky_relu(self.conv3(x2, edge_index))
+            # concatenazione
             x= torch.cat([x1,x2,x3], dim=1)
+            # somma del batch
             x = global_add_pool(x, batch)
+            # Layer densi
             x = F.relu(self.fc1(x))
             x = F.relu(self.fc2(x))
             x = self.fc3(x)
@@ -51,9 +56,11 @@ class ConvN(torch.nn.Module):
         else:
             x = data.x
             edge_index = data.edge_index
+            # Layer convolutivi
             x1 = F.relu(self.conv1(x, edge_index))
             x2 = F.relu(self.conv2(x1, edge_index))
             x3 = F.relu(self.conv3(x2, edge_index))
+            # concatenazione
             x= torch.cat([x1,x2,x3], dim=1)
             x = torch.sum(x,0)
             x = F.relu(self.fc1(x))
@@ -62,7 +69,8 @@ class ConvN(torch.nn.Module):
             #x=F.log_softmax(x, dim=-1)
 
         return x
-
+    
+    # funzione salva il modello
     def save_test(self, modelname1, modelname2):
         torch.save(self.state_dict(), modelname1)
         #torch.save(self.linear.state_dict(), modelname2)
