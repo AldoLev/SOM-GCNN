@@ -34,13 +34,15 @@ class ConvSOM_dense1(torch.nn.Module):
             self.load_state_dict(torch.load('./model_to_load/mod64_save'+load+'.pt',map_location=device), strict=False)
             print('model '+load+' loaded')
 
-
+    # Funzione di output della SOM per permettere il passaggio del gradiente 
     def SOM_gradient( self, input, batch=[0]):
         n, q = input.size()
         np_input = input.cpu().detach().numpy()
+        # versione per online learning
         if np.array_equal(batch, [0]):
             G = torch.zeros((self.p[0],self.p[1]),dtype=torch.float32).to(device)
             for i in range(n):
+                # creating a mask matrix with the selected neighborhood function for each graph vertex
                 T_Tens = torch.from_numpy(self.som.neighborhood(self.som.winner(np_input[i,:] ), self.sigma)).type(torch.FloatTensor).to(device) # Tensorize the lattice mask
                 #S_Tens_scalar_input = torch.matmul( self.S_Tens, input[i,:]) # lattice matrix of the scalar products
                 #G = G + torch.mul( S_Tens_scalar_input, T_Tens ) # summing the contribution for each graph vertex
@@ -49,9 +51,11 @@ class ConvSOM_dense1(torch.nn.Module):
                 HS_norm = torch.exp( -torch.norm( w_- x_ ) ) # SOM with exp
                 G = G + T_Tens*HS_norm # summing the contribution for each graph vertex
             return G
+        # verione per batch learning
         else:
             G = torch.zeros((batch[-1]+1,self.p[0],self.p[1]),dtype=torch.float32).to(device)
             for i in range(len(batch)):
+                # creating a mask matrix with the selected neighborhood function for each graph vertex
                 T_Tens = torch.from_numpy(self.som.neighborhood(self.som.winner(np_input[i,:] ), self.sigma)).type(torch.FloatTensor).to(device) # Tensorize the lattice mask
                 #S_Tens_scalar_input = torch.matmul( self.S_Tens, input[i,:]) # lattice matrix of the scalar products
                 #G[batch[i]] = G[batch[i]] + torch.mul( S_Tens_scalar_input, T_Tens ) # summing the contribution for each graph vertex
@@ -115,13 +119,14 @@ class ConvSOM_dense1(torch.nn.Module):
         accuracy_tr = []
         accuracy_vl = []
         C = [ 1E3, 1E2, 1, 1E-1, 1E-2, 1E-3, 1E-4]
+        # loading del dataset per applicare l'SVM
         for i in range(len(dataset)):
             X.append(np.ndarray.flatten(self.img_out(dataset[i].to(device))))
             Y.append(dataset[i].y.numpy().item()/2)
 
         X = np.array(X)
         Y = np.array(Y)
-
+        # validation del parametro C
         kf = KFold(n_splits=8, shuffle = True)
         kf.split(X)
         for train_ind, val_ind in kf.split(X):
@@ -152,6 +157,7 @@ class ConvSOM_dense1(torch.nn.Module):
         #x = self.convolution(data)
         x = data.x
         edge_index = data.edge_index
+        # ottenere la rappresentazione di output della convoluzione
         with torch.no_grad():
             x1 = F.leaky_relu(self.conv1(x, edge_index))
             x2 = F.leaky_relu(self.conv2(x1, edge_index))
