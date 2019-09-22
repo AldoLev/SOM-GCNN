@@ -1,3 +1,4 @@
+# Main file per il training del modello GCNNsum
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
