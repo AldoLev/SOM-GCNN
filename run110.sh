@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Script per ottenere l'accuratezza del modello SOM-GCNN
+
 #is_test=1: lancia un run di prova
 #is_test=0: run normale
 #fold=10: numero di fold per la cross validation (se cambiato si deve cambiare anche i file 10fold_idx)
