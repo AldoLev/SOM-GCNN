@@ -9,6 +9,6 @@ In order to use the model network a series of packages are necessary such as the
 3. Install Minisom by following the instruction in: https://github.com/JustGlowing/minisom
 
 To run the accuracy on PTC_MR dataset:
- ```
-Give the example
-``'
+```
+./run110.sh
+```
